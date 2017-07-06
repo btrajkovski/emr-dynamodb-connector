@@ -75,9 +75,15 @@ public class DynamoDBExport extends Configured implements Tool {
         return -1;
       }
     }
-    Integer totalSegments = null;
+
+    String dynamoDbRegion = "";
     if (args.length >= 4) {
-      String val = args[3];
+      dynamoDbRegion=  args[3];
+    }
+
+    Integer totalSegments = null;
+    if (args.length >= 5) {
+      String val = args[4];
       try {
         totalSegments = Integer.parseInt(val);
       } catch (Exception e) {
@@ -85,7 +91,7 @@ public class DynamoDBExport extends Configured implements Tool {
         return -1;
       }
     }
-    setTableProperties(jobConf, tableName, readRatio, totalSegments);
+    setTableProperties(jobConf, tableName, readRatio, dynamoDbRegion, totalSegments);
 
     Date startTime = new Date();
     System.out.println("Job started: " + startTime);
@@ -99,13 +105,18 @@ public class DynamoDBExport extends Configured implements Tool {
     return 0;
   }
 
-  private void setTableProperties(JobConf jobConf, String tableName, Double readRatio, Integer
-      totalSegments) {
+  private void setTableProperties(JobConf jobConf, String tableName, Double readRatio, String dynamoDBRegion,
+                                  Integer totalSegments) {
     jobConf.set(DynamoDBConstants.TABLE_NAME, tableName);
     jobConf.set(DynamoDBConstants.INPUT_TABLE_NAME, tableName);
     jobConf.set(DynamoDBConstants.OUTPUT_TABLE_NAME, tableName);
 
-    DynamoDBClient client = new DynamoDBClient(jobConf);
+    DynamoDBClient client = null;
+    if (dynamoDBRegion.equals("")) {
+      client = new DynamoDBClient(jobConf);
+    } else {
+      client = new DynamoDBClient(jobConf, dynamoDBRegion);
+    }
     TableDescription description = client.describeTable(tableName);
 
     Long readThroughput = description.getProvisionedThroughput().getReadCapacityUnits();
@@ -143,7 +154,7 @@ public class DynamoDBExport extends Configured implements Tool {
       System.out.println("Error: " + error);
     }
 
-    System.out.println("Usage: Export <path> <table-name> [<read-ratio>] [<total-segment-count>]");
+    System.out.println("Usage: Export <path> <table-name> [<dynamodb-region>] [<read-ratio>] [<total-segment-count>]");
     ToolRunner.printGenericCommandUsage(System.out);
   }
 }
